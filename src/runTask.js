@@ -1,6 +1,7 @@
 import { spawn } from 'cross-spawn'
-import kleur from 'kleur'
+
 import path, { relative } from 'path'
+import pc from 'picocolors'
 import stripAnsi from 'strip-ansi'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from './fs.js'
 import { logger } from './logger/logger.js'
@@ -14,7 +15,7 @@ import { computeManifest } from './manifest/computeManifest.js'
 export async function runTaskIfNeeded(task, tasks) {
   task.logger.restartTimer()
 
-  const taskConfig = tasks.config.getTaskConfig(task.taskDir, task.taskName)
+  const taskConfig = tasks.config.getTaskConfig(task.workspace.dir, task.taskName)
 
   const previousManifestPath = taskConfig.getManifestPath()
   const nextManifestPath = taskConfig.getNextManifestPath()
@@ -64,7 +65,7 @@ export async function runTaskIfNeeded(task, tasks) {
 
   if (!didRunTask || didSucceed) {
     task.logger.note(
-      'input manifest saved: ' + path.relative(tasks.config.workspaceRoot, previousManifestPath),
+      'input manifest saved: ' + path.relative(tasks.config.project.root.dir, previousManifestPath),
     )
   }
 
@@ -93,9 +94,9 @@ export async function runTaskIfNeeded(task, tasks) {
  * @returns {Promise<{didSucceed: boolean;}>}
  */
 async function runTask(task, tasks) {
-  const taskConfig = tasks.config.getTaskConfig(task.taskDir, task.taskName)
+  const taskConfig = tasks.config.getTaskConfig(task.workspace.dir, task.taskName)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const packageJson = JSON.parse(readFileSync(`${task.taskDir}/package.json`, 'utf8'))
+  const packageJson = JSON.parse(readFileSync(`${task.workspace.dir}/package.json`, 'utf8'))
   /** @type {string} */
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let command =
@@ -107,7 +108,7 @@ async function runTask(task, tasks) {
     if (!taskConfig.baseCommand) {
       // TODO: evaluate this stuff ahead-of-time
       logger.fail(
-        `Encountered 'lazy inherit' for scripts#${task.taskName} in ${task.taskDir}/package.json, but there is baseCommand configured for the task '${task.taskName}'`,
+        `Encountered 'lazy inherit' for scripts#${task.taskName} in ${task.workspace.dir}/package.json, but there is baseCommand configured for the task '${task.taskName}'`,
       )
       process.exit(1)
     }
@@ -116,19 +117,19 @@ async function runTask(task, tasks) {
   }
 
   task.logger.log(
-    kleur.bold('RUN ') +
-      kleur.green().bold(command) +
-      (task.extraArgs.length ? kleur.cyan().bold(' ' + task.extraArgs.join(' ')) : '') +
-      kleur.gray(' in ' + relative(process.cwd(), task.taskDir)),
+    pc.bold('RUN ') +
+      pc.green(pc.bold(command)) +
+      (task.extraArgs.length ? pc.cyan(pc.bold(' ' + task.extraArgs.join(' '))) : '') +
+      pc.gray(' in ' + relative(process.cwd(), task.workspace.dir) ?? './'),
   )
 
   const proc = spawn(command, task.extraArgs, {
-    cwd: task.taskDir,
+    cwd: task.workspace.dir,
     shell: true,
     stdio: ['ignore'],
     env: {
       ...process.env,
-      PATH: `./node_modules/.bin:${path.join(tasks.config.workspaceRoot, 'node_modules/.bin')}:${
+      PATH: `./node_modules/.bin:${path.join(tasks.config.project.root.dir, 'node_modules/.bin')}:${
         process.env.PATH ?? ''
       }`,
       FORCE_COLOR: '1',

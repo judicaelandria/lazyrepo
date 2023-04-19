@@ -1,5 +1,8 @@
+import pc from 'picocolors'
+import { dedent } from 'ts-dedent'
 import { TaskGraph } from '../TaskGraph.js'
 import { Config } from '../config/config.js'
+import { createTimer } from '../createTimer.js'
 import { InteractiveLogger } from '../logger/InteractiveLogger.js'
 import { logger } from '../logger/logger.js'
 import { rainbow } from '../rainbow.js'
@@ -8,13 +11,15 @@ import { rainbow } from '../rainbow.js'
  * @param {{taskName: string, options: import('../types.js').CLIOption}} args
  */
 export async function run({ taskName, options }) {
-  const config = await Config.from(process.cwd())
+  const timer = createTimer()
+  const config = await Config.fromCwd(process.cwd())
 
   const filterPaths = options.filter
     ? Array.isArray(options.filter)
       ? options.filter
       : [options.filter]
-    : []
+    : // match the directory or any of its descendants
+      [process.cwd() + `{,**/*}`]
 
   /** @type {import('../types.js').RequestedTask[]} */
   const requestedTasks = [
@@ -34,7 +39,7 @@ export async function run({ taskName, options }) {
   if (tasks.sortedTaskKeys.length === 0) {
     logger.fail(
       `No tasks found matching [${requestedTasks.map((t) => t.taskName).join(', ')}] in ${
-        config.workspaceRoot
+        config.project.root.dir
       }`,
     )
   }
@@ -43,12 +48,26 @@ export async function run({ taskName, options }) {
   if (logger instanceof InteractiveLogger) logger.clearTasks()
 
   const failedTasks = tasks.allFailedTasks()
-
   if (failedTasks.length > 0) {
     logger.fail(`Failed tasks: ${failedTasks.join(', ')}`)
   }
 
-  if (Object.entries(tasks.allTasks).every(([, task]) => task.status === 'success:lazy')) {
-    logger.log('\n' + rainbow('>>> MAXIMUM LAZY'))
-  }
+  const stats = tasks.getTaskStats()
+  const successOutput = `${pc.green(stats.successful.toString() + ' successful')}, ${
+    stats.allTasks
+  } total`
+
+  const cachedOutput =
+    stats.allTasks === stats['success:lazy']
+      ? rainbow('>>> MAXIMUM LAZY')
+      : `${stats['success:lazy']} cached, ${stats.allTasks} total`
+
+  const output = dedent`
+    
+          Tasks:     ${successOutput}
+         Cached:     ${cachedOutput}
+           Time:     ${timer.formatElapsedTime()}
+
+`
+  logger.log(output)
 }

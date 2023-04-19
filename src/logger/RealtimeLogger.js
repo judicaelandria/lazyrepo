@@ -1,11 +1,12 @@
 /** @typedef {import('../types.js').CliLogger} CliLogger */
-import k from 'kleur'
+import pc from 'picocolors'
 import { createTimer } from '../createTimer.js'
 import {
   formatFailMessage,
   formatInfoMessage,
   formatNoteMessage,
   formatSuccessMessage,
+  formatWarningMessage,
   getColorForString,
   prefixLines,
 } from './formatting.js'
@@ -64,6 +65,13 @@ export class RealtimeLogger {
   }
 
   /**
+   * @param {string[]} args
+   */
+  warn(...args) {
+    this.log(formatWarningMessage(...args))
+  }
+
+  /**
    * @param {string} message
    */
   success(message) {
@@ -107,7 +115,7 @@ export class RealtimeLogger {
         isDone = true
       },
       success: (message) => {
-        log(formatSuccessMessage(message, k.gray(`in ${timer.formatElapsedTime()}`)))
+        log(formatSuccessMessage(message, pc.gray(`in ${timer.formatElapsedTime()}`)))
         isDone = true
       },
       info: (...args) => {
@@ -115,6 +123,9 @@ export class RealtimeLogger {
       },
       note: (...args) => {
         log(formatInfoMessage(...args))
+      },
+      warn: (...args) => {
+        log(formatWarningMessage(...args))
       },
     }
   }
