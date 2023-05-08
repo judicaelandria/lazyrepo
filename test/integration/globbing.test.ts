@@ -11,7 +11,7 @@ test('excludes take precedence', async () => {
             include: ['<rootDir>/scripts/**/*'],
             exclude: ['scripts/tsconfig.tsbuildinfo'],
           },
-          tasks: {
+          scripts: {
             build: {
               cache: {
                 inputs: ['scripts/build.js'],
@@ -33,21 +33,21 @@ test('excludes take precedence', async () => {
 
       expect(firstRun.status).toBe(0)
       expect(firstRun.output).toMatchInlineSnapshot(`
-        "lazyrepo @0.0.0-test
-        --------------------
+        "lazyrepo 0.0.0-test
+        -------------------
         Loaded config file: lazy.config.js
 
-        build::<rootDir> Finding files matching scripts/**/* took 1.00s
-        build::<rootDir> Finding files matching scripts/build.js took 1.00s
-        build::<rootDir> Hashed 1/1 files in 1.00s
+        build::<rootDir> finding files matching scripts/**/* took 1.00s
+        build::<rootDir> finding files matching scripts/build.js took 1.00s
+        build::<rootDir> hashed 1/1 files in 1.00s
         build::<rootDir> cache miss, no previous manifest found
         build::<rootDir> RUN node scripts/build.js > .out.txt in 
-        build::<rootDir> input manifest saved: .lazy/manifests/build
+        build::<rootDir> input manifest: .lazy/build/manifest.tsv
         build::<rootDir> ✔ done in 1.00s
 
-              Tasks:     1 successful, 1 total
-             Cached:     0 cached, 1 total
-               Time:     1.00s
+             Tasks:  1 successful, 1 total
+            Cached:  0/1 cached
+              Time:  1.00s
 
         "
       `)
@@ -57,8 +57,8 @@ test('excludes take precedence', async () => {
         "
       `)
 
-      expect(t.read('.lazy/manifests/build').includes('tsconfig.tsbuildinfo')).toBeFalsy()
-      expect(t.read('.lazy/manifests/build').includes('build.js')).toBeTruthy()
+      expect(t.read('.lazy/build/manifest.tsv').includes('tsconfig.tsbuildinfo')).toBeFalsy()
+      expect(t.read('.lazy/build/manifest.tsv').includes('build.js')).toBeTruthy()
     },
   )
 })

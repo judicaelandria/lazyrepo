@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { fromZodError } from 'zod-validation-error'
+import { formatZodError } from '../formatZodError.js'
+import { logger } from '../logger/logger.js'
 
-/** @type {z.ZodType<import('../types.js').GlobConfig>} */
+/** @type {z.ZodType<import('./config-types.js').GlobConfig>} */
 export const globConfigSchema = z.union([
   z.array(z.string()),
   z
@@ -12,61 +13,114 @@ export const globConfigSchema = z.union([
     .strict(),
 ])
 
-/** @type {z.ZodType<import('../types.js').CacheConfig>} */
-export const cacheConfigSchema = z
+export const _cacheConfigSchema = z
   .object({
     inputs: globConfigSchema.optional(),
     outputs: globConfigSchema.optional(),
     envInputs: z.array(z.string()).optional(),
+  })
+  .strict()
+
+/** @type {z.ZodType<import('./config-types.js').CacheConfig>} */
+const cacheConfigSchema = _cacheConfigSchema
+
+/** @type {z.ZodType<import('./config-types.js').DependentCacheConfig>} */
+export const dependentCacheConfigSchema = _cacheConfigSchema
+  .extend({
     usesOutputFromDependencies: z.boolean().optional(),
     inheritsInputFromDependencies: z.boolean().optional(),
   })
   .strict()
 
-const baseTaskSchema = z
+/** @type {z.ZodType<import('./config-types.js').RunsAfter>} */
+const runsAfterSchema = z
   .object({
-    runsAfter: z
+    usesOutput: z.boolean().optional(),
+    inheritsInput: z.boolean().optional(),
+    in: z
+      .union([
+        z.literal('all-packages'),
+        z.literal('self-and-dependencies'),
+        z.literal('self-only'),
+      ])
+      .optional(),
+  })
+  .strict()
+
+const logMode = z.union([
+  z.literal('full'),
+  z.literal('new-only'),
+  z.literal('errors-only'),
+  z.literal('none'),
+])
+
+/** @type {z.ZodType<import('./config-types.js').TopLevelScript>} */
+export const topLevelScriptSchema = z
+  .object({
+    execution: z.literal('top-level'),
+    baseCommand: z.string(),
+    cache: z.union([z.literal('none'), cacheConfigSchema]).optional(),
+    runsAfter: z.record(runsAfterSchema).optional(),
+    logMode: logMode.optional(),
+  })
+  .strict()
+
+/** @type {z.ZodType<import('./config-types.js').DependentScript>} */
+export const dependentScriptSchema = z
+  .object({
+    execution: z.literal('dependent').optional(),
+    baseCommand: z.string().optional(),
+    cache: z.union([z.literal('none'), dependentCacheConfigSchema]).optional(),
+    parallel: z.boolean().optional(),
+    runsAfter: z.record(runsAfterSchema).optional(),
+    workspaceOverrides: z
       .record(
         z
           .object({
-            usesOutput: z.boolean().optional(),
-            inheritsInput: z.boolean().optional(),
-            in: z
-              .union([
-                z.literal('all-packages'),
-                z.literal('self-and-dependencies'),
-                z.literal('self-only'),
-              ])
-              .optional(),
+            logMode: logMode.optional(),
+            baseCommand: z.string().optional(),
+            cache: z.union([z.literal('none'), dependentCacheConfigSchema]).optional(),
+            runsAfter: z.record(runsAfterSchema).optional(),
           })
           .strict(),
       )
       .optional(),
+    logMode: logMode.optional(),
+  })
+  .strict()
+
+/** @type {z.ZodType<import('./config-types.js').IndependentScript>} */
+export const independentScriptSchema = z
+  .object({
+    execution: z.literal('independent'),
+    baseCommand: z.string().optional(),
     cache: z.union([z.literal('none'), cacheConfigSchema]).optional(),
     parallel: z.boolean().optional(),
+    runsAfter: z.record(runsAfterSchema).optional(),
+    workspaceOverrides: z
+      .record(
+        z
+          .object({
+            logMode: logMode.optional(),
+            baseCommand: z.string().optional(),
+            cache: z.union([z.literal('none'), cacheConfigSchema]).optional(),
+            runsAfter: z.record(runsAfterSchema).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    logMode: logMode.optional(),
   })
   .strict()
 
-/** @type {z.ZodType<import('../types.js').TopLevelTask>} */
-export const topLevelTaskSchema = baseTaskSchema
-  .extend({
-    execution: z.literal('top-level'),
-    baseCommand: z.string(),
-  })
-  .strict()
+/** @type {z.ZodType<import('./config-types.js').LazyScript>} */
+export const lazyScriptSchema = z.union([
+  topLevelScriptSchema,
+  dependentScriptSchema,
+  independentScriptSchema,
+])
 
-/** @type {z.ZodType<import('../types.js').PackageLevelTask>} */
-export const packageLevelTaskSchema = baseTaskSchema
-  .extend({
-    execution: z.union([z.literal('dependent'), z.literal('independent')]).optional(),
-    baseCommand: z.string().optional(),
-  })
-  .strict()
-
-/** @type {z.ZodType<import('../types.js').LazyTask>} */
-export const lazyTaskSchema = z.union([topLevelTaskSchema, packageLevelTaskSchema])
-
-/** @type {z.ZodType<import('../types.js').LazyConfig>} */
+/** @type {z.ZodType<import('./config-types.js').LazyConfig>} */
 export const lazyConfigSchema = z
   .object({
     baseCacheConfig: z
@@ -77,24 +131,30 @@ export const lazyConfigSchema = z
       })
       .strict()
       .optional(),
-    tasks: z.record(lazyTaskSchema).optional(),
+    scripts: z.record(lazyScriptSchema).optional(),
+    tasks: z.record(lazyScriptSchema).optional(),
+    ignoreWorkspaces: z.array(z.string()).optional(),
   })
   .strict()
 
 /**
  * @param {import('./resolveConfig.js').LoadedConfig} config
- * @returns {import('../types.js').LazyConfig}
+ * @returns {import('./config-types.js').LazyConfig}
  */
 export function validateConfig(config) {
   try {
-    return lazyConfigSchema.parse(config)
+    const res = lazyConfigSchema.parse(config)
+
+    if ('tasks' in res) {
+      logger.warn(`The "tasks" property is deprecated. Please use "scripts" instead.`)
+      // @ts-expect-error
+      res.scripts = res.tasks
+    }
+
+    return res
   } catch (err) {
     if (err instanceof z.ZodError) {
-      const validationError = fromZodError(err, {
-        issueSeparator: '\n',
-        prefix: '',
-        prefixSeparator: '',
-      })
+      const validationError = formatZodError(err)
       throw new Error(validationError.message)
     }
     throw err
