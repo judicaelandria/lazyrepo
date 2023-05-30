@@ -3,7 +3,7 @@ import { Dir, makeConfigFile, makePackageJson, runIntegrationTest } from './runI
 
 const makeDir = (
   build: LazyScript,
-  { coreBuild = 'echo "hello there my good world"', utilsBuild = 'echo "michael cheese"' } = {},
+  { coreBuild = 'node -e "console.log(2)"', utilsBuild = 'node -e "console.log(0)"' } = {},
 ) =>
   ({
     'lazy.config.js': makeConfigFile({
@@ -50,11 +50,11 @@ test('log outputs are stored on disk', async () => {
       expect(t.exists('packages/core/.lazy/build/output.log')).toBe(true)
       expect(t.exists('packages/utils/.lazy/build/output.log')).toBe(true)
       expect(t.read('packages/core/.lazy/build/output.log')).toMatchInlineSnapshot(`
-        "hello there my good world
+        "2
         "
       `)
       expect(t.read('packages/utils/.lazy/build/output.log')).toMatchInlineSnapshot(`
-        "michael cheese
+        "0
         "
       `)
       expect(firstRun.output).toMatchInlineSnapshot(`
@@ -62,22 +62,18 @@ test('log outputs are stored on disk', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
-        build::packages/utils michael cheese
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
+        build::packages/utils 0
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "hello there my good world" in packages/core
-        build::packages/core hello there my good world
+        build::packages/core RUN node -e "console.log(2)" in packages/core
+        build::packages/core 2
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core ✔ done in 1.00s
 
@@ -109,22 +105,18 @@ test('new-only makes it so that the output is suppressed on cache hits', async (
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
-        build::packages/utils michael cheese
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
+        build::packages/utils 0
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "hello there my good world" in packages/core
-        build::packages/core hello there my good world
+        build::packages/core RUN node -e "console.log(2)" in packages/core
+        build::packages/core 2
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core ✔ done in 1.00s
 
@@ -143,16 +135,12 @@ test('new-only makes it so that the output is suppressed on cache hits', async (
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
@@ -166,11 +154,11 @@ test('new-only makes it so that the output is suppressed on cache hits', async (
       `)
 
       expect(t.read('packages/core/.lazy/build/output.log')).toMatchInlineSnapshot(`
-        "hello there my good world
+        "2
         "
       `)
       expect(t.read('packages/utils/.lazy/build/output.log')).toMatchInlineSnapshot(`
-        "michael cheese
+        "0
         "
       `)
     },
@@ -198,16 +186,12 @@ test('The default mode is new-only the output is suppressed on cache hits', asyn
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
@@ -221,11 +205,11 @@ test('The default mode is new-only the output is suppressed on cache hits', asyn
       `)
 
       expect(t.read('packages/core/.lazy/build/output.log')).toMatchInlineSnapshot(`
-        "hello there my good world
+        "2
         "
       `)
       expect(t.read('packages/utils/.lazy/build/output.log')).toMatchInlineSnapshot(`
-        "michael cheese
+        "0
         "
       `)
     },
@@ -249,22 +233,18 @@ test('in full mode the cached output is replayed', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
-        build::packages/utils michael cheese
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
+        build::packages/utils 0
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "hello there my good world" in packages/core
-        build::packages/core hello there my good world
+        build::packages/core RUN node -e "console.log(2)" in packages/core
+        build::packages/core 2
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core ✔ done in 1.00s
 
@@ -283,22 +263,18 @@ test('in full mode the cached output is replayed', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils  CACHED OUTPUT 
-        michael cheese
+        0
 
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core  CACHED OUTPUT 
-        hello there my good world
+        2
 
         build::packages/core ✔ cache hit ⚡️ in 1.00s
 
@@ -329,21 +305,17 @@ test('in none mode the output is never logged', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "hello there my good world" in packages/core
+        build::packages/core RUN node -e "console.log(2)" in packages/core
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
         build::packages/core ✔ done in 1.00s
@@ -363,16 +335,12 @@ test('in none mode the output is never logged', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
@@ -405,21 +373,17 @@ test('in errors-only mode the output is never logged if things are successful', 
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "hello there my good world" in packages/core
+        build::packages/core RUN node -e "console.log(2)" in packages/core
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
         build::packages/core ✔ done in 1.00s
@@ -439,16 +403,12 @@ test('in errors-only mode the output is never logged if things are successful', 
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
@@ -474,7 +434,7 @@ test('in errors-only mode the output is logged if things fail', async () => {
           logMode: 'errors-only',
         },
         {
-          coreBuild: 'echo "oh no" && exit 1',
+          coreBuild: 'node -e "console.log(1)" && exit 1',
         },
       ),
     },
@@ -486,23 +446,19 @@ test('in errors-only mode the output is logged if things fail', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "oh no" && exit 1 in packages/core
+        build::packages/core RUN node -e "console.log(1)" && exit 1 in packages/core
         build::packages/core  ERROR OUTPUT 
-        oh no
+        1
 
         build::packages/core ∙ ERROR ∙ failed
 
@@ -523,21 +479,17 @@ test('in errors-only mode the output is logged if things fail', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "oh no" && exit 1 in packages/core
+        build::packages/core RUN node -e "console.log(1)" && exit 1 in packages/core
         build::packages/core  ERROR OUTPUT 
-        oh no
+        1
 
         build::packages/core ∙ ERROR ∙ failed
 
@@ -563,7 +515,7 @@ test('in new-only mode it logs errors', async () => {
           logMode: 'new-only',
         },
         {
-          coreBuild: 'echo "oh no" && exit 1',
+          coreBuild: 'node -e "console.log(1)" && exit 1',
         },
       ),
     },
@@ -575,24 +527,20 @@ test('in new-only mode it logs errors', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
-        build::packages/utils michael cheese
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
+        build::packages/utils 0
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "oh no" && exit 1 in packages/core
-        build::packages/core oh no
+        build::packages/core RUN node -e "console.log(1)" && exit 1 in packages/core
+        build::packages/core 1
         build::packages/core  ERROR OUTPUT 
-        oh no
+        1
 
         build::packages/core ∙ ERROR ∙ failed
 
@@ -613,22 +561,18 @@ test('in new-only mode it logs errors', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "oh no" && exit 1 in packages/core
-        build::packages/core oh no
+        build::packages/core RUN node -e "console.log(1)" && exit 1 in packages/core
+        build::packages/core 1
         build::packages/core  ERROR OUTPUT 
-        oh no
+        1
 
         build::packages/core ∙ ERROR ∙ failed
 
@@ -654,7 +598,7 @@ test('in full mode it logs errors', async () => {
           logMode: 'full',
         },
         {
-          coreBuild: 'echo "oh no" && exit 1',
+          coreBuild: 'node -e "console.log(1)" && exit 1',
         },
       ),
     },
@@ -666,24 +610,20 @@ test('in full mode it logs errors', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo "michael cheese" in packages/utils
-        build::packages/utils michael cheese
+        build::packages/utils RUN node -e "console.log(0)" in packages/utils
+        build::packages/utils 0
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "oh no" && exit 1 in packages/core
-        build::packages/core oh no
+        build::packages/core RUN node -e "console.log(1)" && exit 1 in packages/core
+        build::packages/core 1
         build::packages/core  ERROR OUTPUT 
-        oh no
+        1
 
         build::packages/core ∙ ERROR ∙ failed
 
@@ -704,24 +644,20 @@ test('in full mode it logs errors', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils  CACHED OUTPUT 
-        michael cheese
+        0
 
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo "oh no" && exit 1 in packages/core
-        build::packages/core oh no
+        build::packages/core RUN node -e "console.log(1)" && exit 1 in packages/core
+        build::packages/core 1
         build::packages/core  ERROR OUTPUT 
-        oh no
+        1
 
         build::packages/core ∙ ERROR ∙ failed
 

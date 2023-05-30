@@ -1,6 +1,19 @@
 import { Dir, makeConfigFile, makePackageJson, runIntegrationTest } from './runIntegrationTests.js'
 
-const makeDir = ({ buildCommand = 'echo $RANDOM > out.txt' } = {}): Dir => ({
+const makeScript = () => `
+  require('fs').writeFileSync('out.txt', 'hey' + Math.random())
+  async function run() {
+    if (process.argv.includes('--sleep')) {
+      await new Promise(r => setTimeout(r, 100))
+    }
+    if (process.argv.includes('--fail')) {
+      process.exit(1)
+    }
+  }
+  run()
+`
+
+const makeDir = ({ buildCommand = 'node index.js' } = {}): Dir => ({
   'lazy.config.js': makeConfigFile({
     scripts: {
       build: {
@@ -15,7 +28,7 @@ const makeDir = ({ buildCommand = 'echo $RANDOM > out.txt' } = {}): Dir => ({
   }),
   packages: {
     core: {
-      'index.js': 'console.log("hello world")',
+      'index.js': makeScript(),
       'package.json': makePackageJson({
         name: '@test/core',
         scripts: {
@@ -27,7 +40,7 @@ const makeDir = ({ buildCommand = 'echo $RANDOM > out.txt' } = {}): Dir => ({
       }),
     },
     utils: {
-      'index.js': 'console.log("hello world")',
+      'index.js': makeScript(),
       'package.json': makePackageJson({
         name: '@test/utils',
         scripts: {
@@ -57,20 +70,16 @@ test('running independent tasks works', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo $RANDOM > out.txt in packages/core
+        build::packages/core RUN node index.js in packages/core
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core ✔ done in 1.00s
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo $RANDOM > out.txt in packages/utils
+        build::packages/utils RUN node index.js in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils ✔ done in 1.00s
 
@@ -89,16 +98,12 @@ test('running independent tasks works', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
         build::packages/core ✔ cache hit ⚡️ in 1.00s
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
@@ -118,7 +123,7 @@ test('running independent tasks works in parallel', async () => {
   await runIntegrationTest(
     {
       packageManager: 'pnpm',
-      structure: makeDir({ buildCommand: 'echo $RANDOM > out.txt && sleep 0.1' }),
+      structure: makeDir({ buildCommand: 'node index.js --sleep' }),
       workspaceGlobs: ['packages/*'],
     },
     async (t) => {
@@ -143,7 +148,7 @@ test('running independent tasks works in parallel', async () => {
   await runIntegrationTest(
     {
       packageManager: 'pnpm',
-      structure: makeDir({ buildCommand: 'echo $RANDOM > out.txt && sleep 0.1' }),
+      structure: makeDir({ buildCommand: 'node index.js --sleep' }),
       workspaceGlobs: ['packages/*'],
     },
     async (t) => {
@@ -167,7 +172,7 @@ test('when a task fails it continues running the others', () => {
     {
       packageManager: 'pnpm',
       structure: makeDir({
-        buildCommand: 'echo $RANDOM > out.txt && exit 1',
+        buildCommand: 'node index.js --fail',
       }),
       workspaceGlobs: ['packages/*'],
     },
@@ -186,21 +191,17 @@ test('when a task fails it continues running the others', () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 4/4 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN echo $RANDOM > out.txt && exit 1 in packages/core
+        build::packages/core RUN node index.js --fail in packages/core
         build::packages/core  ERROR OUTPUT 
 
         build::packages/core ∙ ERROR ∙ failed
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 4/4 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN echo $RANDOM > out.txt && exit 1 in packages/utils
+        build::packages/utils RUN node index.js --fail in packages/utils
         build::packages/utils  ERROR OUTPUT 
 
         build::packages/utils ∙ ERROR ∙ failed

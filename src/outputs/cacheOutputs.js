@@ -1,8 +1,9 @@
-import { dirname, join, relative } from 'path'
+import { cwd } from '../cwd.js'
 import { mkdirSync, statSync } from '../fs.js'
 import { logger } from '../logger/logger.js'
 import { createLazyWriteStream } from '../manifest/createLazyWriteStream.js'
 import { getOutputFiles } from '../manifest/getInputFiles.js'
+import { dirname, join, relative } from '../path.js'
 import { rimraf } from '../utils/rimraf.js'
 import { copyFileWithMtime } from './copyFileWithMtime.js'
 
@@ -18,9 +19,12 @@ export async function cacheOutputs(tasks, task) {
   rimraf(outDir)
   rimraf(outManifestPath)
 
-  if (!outputFiles || outputFiles.length === 0) {
+  if (!outputFiles || taskConfig.cache === 'none') {
     task.outputFiles = []
-    return
+  } else if (outputFiles.length === 0) {
+    task.outputFiles = []
+    // TODO: should this be a failure? with a config option to allow it to pass?
+    task.logger.warn(`no output files found`)
   } else {
     task.outputFiles = outputFiles
   }
@@ -30,11 +34,13 @@ export async function cacheOutputs(tasks, task) {
   const rootWorkspaceDir = tasks.config.project.root.dir
 
   const manifest = createLazyWriteStream(outManifestPath)
+  let numFiles = 0
 
-  for (const file of outputFiles) {
+  for (const file of outputFiles ?? []) {
     if (file.startsWith('..')) {
       throw logger.fail('output file is outside of workspace: ' + file)
     }
+    numFiles++
     const absoluteFile = join(rootWorkspaceDir, file)
     const dest = join(outDir, file)
     mkdirSync(dirname(dest), { recursive: true })
@@ -46,5 +52,7 @@ export async function cacheOutputs(tasks, task) {
   }
 
   await manifest.close()
-  task.logger.log('output manifest:', relative(process.cwd(), outManifestPath))
+  if (numFiles) {
+    task.logger.log('output manifest:', relative(cwd, outManifestPath))
+  }
 }

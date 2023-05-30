@@ -2,13 +2,13 @@ import { LazyScript } from '../../index.js'
 import { Dir, makeConfigFile, makePackageJson, runIntegrationTest } from './runIntegrationTests.js'
 
 const makeWriteScript = (structure: Dir) => {
-  let script = ''
+  let script = 'import {mkdirSync, writeFileSync} from "fs"\n'
 
-  const processDir = (dir: Dir, path = '$PWD') => {
-    script += `mkdir -p ${path}\n`
+  const processDir = (dir: Dir, path = '.') => {
+    script += `mkdirSync(${JSON.stringify(path)}, { recursive: true })\n`
     for (const [name, value] of Object.entries(dir)) {
       if (typeof value === 'string') {
-        script += `echo '${value}' > ${path}/${name}\n`
+        script += `writeFileSync(${JSON.stringify(`${path}/${name}`)}, ${JSON.stringify(value)})\n`
       } else if (value) {
         processDir(value, `${path}/${name}`)
       }
@@ -40,11 +40,12 @@ const makeDir = ({
     packages: {
       core: {
         'index.js': 'console.log("hello world")',
-        'core-build.sh': coreBuildScript,
+        'core-build.js': coreBuildScript,
         'package.json': makePackageJson({
+          type: 'module',
           name: '@test/core',
           scripts: {
-            build: 'sh core-build.sh',
+            build: 'node core-build.js',
           },
           dependencies: {
             '@test/utils': '*',
@@ -53,15 +54,20 @@ const makeDir = ({
       },
       utils: {
         'index.js': 'console.log("hello world")',
-        'utils-build.sh': utilsBuildScript,
+        'utils-build.js': utilsBuildScript,
         'package.json': makePackageJson({
+          type: 'module',
           name: '@test/utils',
           scripts: {
-            build: 'sh utils-build.sh',
+            build: 'node utils-build.js',
           },
         }),
       },
     },
+    'package.json': makePackageJson({
+      type: 'module',
+      workspaces: ['packages/*'],
+    }),
   } satisfies Dir)
 
 const cleanup = (s: string) => {
@@ -93,24 +99,20 @@ test('cached files are reinstated on subsequent runs', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 5/5 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN sh utils-build.sh in packages/utils
+        build::packages/utils RUN node utils-build.js in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
-        build::packages/utils finding files matching packages/utils/**/*.txt took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 6/6 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN sh core-build.sh in packages/core
+        build::packages/core RUN node core-build.js in packages/core
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
-        build::packages/core finding files matching packages/core/**/*.txt took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core ✔ done in 1.00s
 
@@ -135,24 +137,20 @@ test('cached files are reinstated on subsequent runs', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/5 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching packages/utils/**/*.txt took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils unchanged packages/utils/utils-out.txt
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/6 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching packages/core/**/*.txt took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core unchanged packages/core/core-out.txt
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file
@@ -182,24 +180,20 @@ test('cached files are reinstated on subsequent runs', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/5 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching packages/utils/**/*.txt took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils restoring missing file: packages/utils/utils-out.txt
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 1/6 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching packages/core/**/*.txt took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core restoring missing file: packages/core/core-out.txt
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file
@@ -220,10 +214,16 @@ test('files in other dirs can be cached', async () => {
     {
       packageManager: 'npm',
       structure: makeDir({
-        coreBuildScript:
-          'mkdir -p ../../root-outputs && echo hello > ../../root-outputs/core-out.txt',
-        utilsBuildScript:
-          'mkdir -p ../../root-outputs && echo hello > ../../root-outputs/utils-out.txt',
+        coreBuildScript: `
+          import {writeFileSync, mkdirSync} from 'fs'
+          mkdirSync('../../root-outputs', {recursive: true})
+          writeFileSync('../../root-outputs/core-out.txt', 'hello')
+        `,
+        utilsBuildScript: `
+          import {writeFileSync, mkdirSync} from 'fs'
+          mkdirSync('../../root-outputs', {recursive: true})
+          writeFileSync('../../root-outputs/utils-out.txt', 'hello')
+        `,
         buildConfig: {
           workspaceOverrides: {
             'packages/core': {
@@ -249,24 +249,20 @@ test('files in other dirs can be cached', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 5/5 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN sh utils-build.sh in packages/utils
+        build::packages/utils RUN node utils-build.js in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
-        build::packages/utils finding files matching root-outputs/utils-* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 6/6 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN sh core-build.sh in packages/core
+        build::packages/core RUN node core-build.js in packages/core
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
-        build::packages/core finding files matching root-outputs/core-* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core ✔ done in 1.00s
 
@@ -298,24 +294,20 @@ test('files in other dirs can be cached', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/5 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching root-outputs/utils-* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils restoring missing file: root-outputs/utils-out.txt
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 1/6 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching root-outputs/core-* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core restoring missing file: root-outputs/core-out.txt
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file
@@ -353,25 +345,21 @@ test('it deletes files that match the output globs but were not there before', a
         -------------------
         Loaded config file: lazy.config.js
 
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/5 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching packages/utils/**/*.txt took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils ⚠️ removing stale output file packages/utils/banana.txt
         build::packages/utils unchanged packages/utils/utils-out.txt
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/6 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching packages/core/**/*.txt took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core unchanged packages/core/core-out.txt
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file
@@ -389,13 +377,57 @@ test('it deletes files that match the output globs but were not there before', a
   )
 })
 
+test('it allows output manifests to be empty', async () => {
+  await runIntegrationTest(
+    {
+      packageManager: 'npm',
+      // don't create the output files
+      structure: makeDir({ coreBuildScript: '', utilsBuildScript: '' }),
+      workspaceGlobs: ['packages/*'],
+    },
+    async (t) => {
+      const firstRun = await t.exec(['build', '--verbose'])
+      expect(firstRun.status).toBe(0)
+
+      expect(firstRun.output).toMatchInlineSnapshot(`
+        "lazyrepo 0.0.0-test
+        -------------------
+        Loaded config file: lazy.config.js
+
+        build::packages/utils finding files took 1.00s
+        build::packages/utils hashed 5/5 files in 1.00s
+        build::packages/utils cache miss, no previous manifest found
+        build::packages/utils RUN node utils-build.js in packages/utils
+        build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
+        build::packages/utils finding files took 1.00s
+        build::packages/utils ⚠️ no output files found
+        build::packages/utils ✔ done in 1.00s
+        build::packages/core finding files took 1.00s
+        build::packages/core hashed 5/5 files in 1.00s
+        build::packages/core cache miss, no previous manifest found
+        build::packages/core RUN node core-build.js in packages/core
+        build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
+        build::packages/core finding files took 1.00s
+        build::packages/core ⚠️ no output files found
+        build::packages/core ✔ done in 1.00s
+
+             Tasks:  2 successful, 2 total
+            Cached:  0/2 cached
+              Time:  1.00s
+
+        "
+      `)
+    },
+  )
+})
+
 test('it caches data in top-level tasks', async () => {
   await runIntegrationTest(
     {
       packageManager: 'npm',
       structure: {
         'package.json': makePackageJson({ type: 'module' }),
-        'build.sh': makeWriteScript({
+        'build.js': makeWriteScript({
           src: {
             'index.js': 'console.log("hello")',
             'cli.js': 'console.log("cli")',
@@ -409,10 +441,10 @@ test('it caches data in top-level tasks', async () => {
             compile: {
               execution: 'top-level',
               cache: {
-                inputs: ['build.sh'],
+                inputs: ['build.js'],
                 outputs: ['src/**/*'],
               },
-              baseCommand: 'sh build.sh',
+              baseCommand: 'node build.js',
             },
           },
         }),
@@ -428,14 +460,12 @@ test('it caches data in top-level tasks', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        compile::<rootDir> finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        compile::<rootDir> finding files matching lazy.config.* took 1.00s
-        compile::<rootDir> finding files matching build.sh took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> hashed 3/3 files in 1.00s
         compile::<rootDir> cache miss, no previous manifest found
-        compile::<rootDir> RUN sh build.sh in 
+        compile::<rootDir> RUN node build.js in ./
         compile::<rootDir> input manifest: .lazy/compile/manifest.tsv
-        compile::<rootDir> finding files matching src/**/* took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> output manifest: .lazy/compile/output-manifest.tsv
         compile::<rootDir> ✔ done in 1.00s
 
@@ -462,13 +492,11 @@ test('it caches data in top-level tasks', async () => {
         -------------------
         Loaded config file: lazy.config.js
 
-        compile::<rootDir> finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        compile::<rootDir> finding files matching lazy.config.* took 1.00s
-        compile::<rootDir> finding files matching build.sh took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> hashed 0/3 files in 1.00s
         compile::<rootDir> input manifest: .lazy/compile/manifest.tsv
         compile::<rootDir> output log: .lazy/compile/output.log
-        compile::<rootDir> finding files matching src/**/* took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> restoring missing file: src/cli.js
         compile::<rootDir> restoring missing file: src/index.js
         compile::<rootDir> restoring missing file: src/test/index.test.js
@@ -495,7 +523,7 @@ function makeDir2({
 }) {
   return {
     'package.json': makePackageJson({ type: 'module', workspaces: ['packages/*'] }),
-    'build.sh': makeWriteScript({
+    'build.js': makeWriteScript({
       src: {
         'index.js': 'console.log("hello")',
         'cli.js': 'console.log("cli")',
@@ -506,7 +534,11 @@ function makeDir2({
     }),
     packages: {
       core: {
-        'build.sh': 'mkdir -p dist && cp ../../src/cli.js dist/cli.js',
+        'build.js': `
+          import { mkdirSync, copyFileSync } from 'fs'
+          mkdirSync('dist', {recursive: true})
+          copyFileSync('../../src/cli.js', 'dist/cli.js')
+        `,
         'package.json': makePackageJson({
           type: 'module',
           name: 'core',
@@ -514,18 +546,22 @@ function makeDir2({
             utils: 'workspace:*',
           },
           scripts: {
-            build: 'sh build.sh',
+            build: 'node build.js',
             execute: 'node dist/cli.js',
           },
         }),
       },
       utils: {
-        'build.sh': 'mkdir -p dist/test && cp ../../src/test/index.test.js dist/test/index.test.js',
+        'build.js': `
+          import { mkdirSync, copyFileSync } from 'fs'
+          mkdirSync('dist/test', {recursive: true})
+          copyFileSync('../../src/test/index.test.js', 'dist/test/index.test.js')
+        `,
         'package.json': makePackageJson({
           type: 'module',
           name: 'utils',
           scripts: {
-            build: 'sh build.sh',
+            build: 'node build.js',
             execute: 'node dist/test/index.test.js',
           },
         }),
@@ -536,10 +572,10 @@ function makeDir2({
         compile: {
           execution: 'top-level',
           cache: {
-            inputs: ['build.sh'],
+            inputs: ['build.js'],
             outputs: ['src/**/*'],
           },
-          baseCommand: 'sh build.sh',
+          baseCommand: 'node build.js',
         },
         build: {
           runsAfter: { compile: { usesOutput: usesOutputFromCompile } },
@@ -571,34 +607,28 @@ test('it feeds cached outputs into downstream task manifests by default', async 
         -------------------
         Loaded config file: lazy.config.js
 
-        compile::<rootDir> finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        compile::<rootDir> finding files matching lazy.config.* took 1.00s
-        compile::<rootDir> finding files matching build.sh took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> hashed 3/3 files in 1.00s
         compile::<rootDir> cache miss, no previous manifest found
-        compile::<rootDir> RUN sh build.sh in 
+        compile::<rootDir> RUN node build.js in ./
         compile::<rootDir> input manifest: .lazy/compile/manifest.tsv
-        compile::<rootDir> finding files matching src/**/* took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> output manifest: .lazy/compile/output-manifest.tsv
         compile::<rootDir> ✔ done in 1.00s
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 7/7 files in 1.00s
         build::packages/utils cache miss, no previous manifest found
-        build::packages/utils RUN sh build.sh in packages/utils
+        build::packages/utils RUN node build.js in packages/utils
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
-        build::packages/utils finding files matching packages/utils/dist/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils ✔ done in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 8/8 files in 1.00s
         build::packages/core cache miss, no previous manifest found
-        build::packages/core RUN sh build.sh in packages/core
+        build::packages/core RUN node build.js in packages/core
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
-        build::packages/core finding files matching packages/core/dist/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core ✔ done in 1.00s
 
@@ -611,15 +641,15 @@ test('it feeds cached outputs into downstream task manifests by default', async 
 
       const coreManifest = t.read('packages/core/.lazy/build/manifest.tsv')
       expect(cleanup(coreManifest)).toMatchInlineSnapshot(`
-        "upstream package inputs	build::packages/utils	adaef5c0e2c108fae222f88dea448bebd5ee85ffcf71b03f2d4a5740cb1c7e7c
-        file	lazy.config.js	1787f57b299169d334cd29ab3defcf9802be5e2db5c9e81e91e777d25426a9c2	TIMESTAMP
+        "upstream package inputs	build::packages/utils	430cd68879caf4554062921c52520c98357a529b772bf5b71f5fe622c068413b
+        file	lazy.config.js	2b90a79034045dfdebbf565ff3ba45b6a0d10a2aeec59edd204ca79a18473f73	TIMESTAMP
         file	package-lock.json	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	TIMESTAMP
-        file	packages/core/build.sh	e8094bacca6e6d8e7eca82e516614b67a9f194059474c5ea1fae6a80b2e2eed8	TIMESTAMP
-        file	packages/core/package.json	8d31c35c8b5521186f6b81d186a75c4a26ceac08c3903aef7b524123e9d0edfd	TIMESTAMP
-        file	packages/utils/dist/test/index.test.js	d42934387ec8d3811bec200e3945c7a837f667b76590cd524c8232d0a21f703f	TIMESTAMP
-        file	src/cli.js	4b4a69b102314d5cbf5c3d5540c37038ca85c8f1f9ef52ead21c3cb16a243dbe	TIMESTAMP
-        file	src/index.js	d223b78a13c314c518f5b3025065c5a73660432c3caa58aade066de7cc03b0af	TIMESTAMP
-        file	src/test/index.test.js	d42934387ec8d3811bec200e3945c7a837f667b76590cd524c8232d0a21f703f	TIMESTAMP
+        file	packages/core/build.js	080fbff443a3bb8cc0b11e193af3ea5cd5aac7bbb11ea492104d00fff3a70ea1	TIMESTAMP
+        file	packages/core/package.json	7af768974d777b23cde371e1e51b508368eba42f68c2009d47316107ca68041e	TIMESTAMP
+        file	packages/utils/dist/test/index.test.js	b8d698bcd6ea71e0d7adf2bf5322f5cf96e0cb7d66d1a862ac1f110fdf0571d9	TIMESTAMP
+        file	src/cli.js	02be9d61aa841f79756989bf537df8d4b3265157efcb1ecadbc33f79c12d73c0	TIMESTAMP
+        file	src/index.js	425de7eed0bfd83eb049395063c45c38a5e1ab4db37dd6920ef88e869bdb616c	TIMESTAMP
+        file	src/test/index.test.js	b8d698bcd6ea71e0d7adf2bf5322f5cf96e0cb7d66d1a862ac1f110fdf0571d9	TIMESTAMP
         "
       `)
 
@@ -633,37 +663,31 @@ test('it feeds cached outputs into downstream task manifests by default', async 
         -------------------
         Loaded config file: lazy.config.js
 
-        compile::<rootDir> finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        compile::<rootDir> finding files matching lazy.config.* took 1.00s
-        compile::<rootDir> finding files matching build.sh took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> hashed 0/3 files in 1.00s
         compile::<rootDir> input manifest: .lazy/compile/manifest.tsv
         compile::<rootDir> output log: .lazy/compile/output.log
-        compile::<rootDir> finding files matching src/**/* took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> restoring missing file: src/cli.js
         compile::<rootDir> restoring missing file: src/index.js
         compile::<rootDir> restoring missing file: src/test/index.test.js
         compile::<rootDir> output manifest: .lazy/compile/output-manifest.tsv
         compile::<rootDir> restored 3 output files
         compile::<rootDir> ✔ cache hit ⚡️ in 1.00s
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 3/7 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching packages/utils/dist/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils unchanged packages/utils/dist/test/index.test.js
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 3/8 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching packages/core/dist/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core unchanged packages/core/dist/cli.js
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file
@@ -693,12 +717,12 @@ test('it does not feed cached outputs into downstream script manifests if you sa
 
       const coreManifest = t.read('packages/core/.lazy/build/manifest.tsv')
       expect(cleanup(coreManifest)).toMatchInlineSnapshot(`
-        "upstream package inputs	build::packages/utils	2b242225b872737d3c439a73a30a3b86ff93d4bcadceb1d0ec2b10db6ee89c62
-        file	lazy.config.js	cddc1cb55d80723563877ca16586bc5a932b409fa8f9bab4bf03e873e2031605	TIMESTAMP
+        "upstream package inputs	build::packages/utils	4a21fdbe60149f0088295c29a4105b31f8c00bc850662cc42eecd9c536678173
+        file	lazy.config.js	e1e03e6f864206e601d60509cbe920f83facdde45d726c6a291cfbc6b9a5c937	TIMESTAMP
         file	package-lock.json	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	TIMESTAMP
-        file	packages/core/build.sh	e8094bacca6e6d8e7eca82e516614b67a9f194059474c5ea1fae6a80b2e2eed8	TIMESTAMP
-        file	packages/core/package.json	8d31c35c8b5521186f6b81d186a75c4a26ceac08c3903aef7b524123e9d0edfd	TIMESTAMP
-        file	packages/utils/dist/test/index.test.js	d42934387ec8d3811bec200e3945c7a837f667b76590cd524c8232d0a21f703f	TIMESTAMP
+        file	packages/core/build.js	080fbff443a3bb8cc0b11e193af3ea5cd5aac7bbb11ea492104d00fff3a70ea1	TIMESTAMP
+        file	packages/core/package.json	7af768974d777b23cde371e1e51b508368eba42f68c2009d47316107ca68041e	TIMESTAMP
+        file	packages/utils/dist/test/index.test.js	b8d698bcd6ea71e0d7adf2bf5322f5cf96e0cb7d66d1a862ac1f110fdf0571d9	TIMESTAMP
         "
       `)
 
@@ -712,37 +736,31 @@ test('it does not feed cached outputs into downstream script manifests if you sa
         -------------------
         Loaded config file: lazy.config.js
 
-        compile::<rootDir> finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        compile::<rootDir> finding files matching lazy.config.* took 1.00s
-        compile::<rootDir> finding files matching build.sh took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> hashed 0/3 files in 1.00s
         compile::<rootDir> input manifest: .lazy/compile/manifest.tsv
         compile::<rootDir> output log: .lazy/compile/output.log
-        compile::<rootDir> finding files matching src/**/* took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> restoring missing file: src/cli.js
         compile::<rootDir> restoring missing file: src/index.js
         compile::<rootDir> restoring missing file: src/test/index.test.js
         compile::<rootDir> output manifest: .lazy/compile/output-manifest.tsv
         compile::<rootDir> restored 3 output files
         compile::<rootDir> ✔ cache hit ⚡️ in 1.00s
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching packages/utils/dist/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils unchanged packages/utils/dist/test/index.test.js
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/5 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching packages/core/dist/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core unchanged packages/core/dist/cli.js
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file
@@ -772,11 +790,11 @@ test('it does not feed cached outputs into downstream task manifests if you say 
 
       const coreManifest = t.read('packages/core/.lazy/build/manifest.tsv')
       expect(cleanup(coreManifest)).toMatchInlineSnapshot(`
-        "upstream package inputs	build::packages/utils	a73baf43bdd130b2afa57959ef7bf6282d06fa5d2a671fba9c2752a4317163fe
-        file	lazy.config.js	9fd27acdebdc774291bbb14aa0f238381e5dab12011d3a4258449f8757daad2a	TIMESTAMP
+        "upstream package inputs	build::packages/utils	4c8d0a38677a21d1f0dc47a0a7313c6b7d85b7cea02c502136a1160c8ebc7c12
+        file	lazy.config.js	fefa5a6fba266289bf345f8ef1768f96cd4632dbcb95ba9b46db330b4854a76e	TIMESTAMP
         file	package-lock.json	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	TIMESTAMP
-        file	packages/core/build.sh	e8094bacca6e6d8e7eca82e516614b67a9f194059474c5ea1fae6a80b2e2eed8	TIMESTAMP
-        file	packages/core/package.json	8d31c35c8b5521186f6b81d186a75c4a26ceac08c3903aef7b524123e9d0edfd	TIMESTAMP
+        file	packages/core/build.js	080fbff443a3bb8cc0b11e193af3ea5cd5aac7bbb11ea492104d00fff3a70ea1	TIMESTAMP
+        file	packages/core/package.json	7af768974d777b23cde371e1e51b508368eba42f68c2009d47316107ca68041e	TIMESTAMP
         "
       `)
 
@@ -790,37 +808,31 @@ test('it does not feed cached outputs into downstream task manifests if you say 
         -------------------
         Loaded config file: lazy.config.js
 
-        compile::<rootDir> finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        compile::<rootDir> finding files matching lazy.config.* took 1.00s
-        compile::<rootDir> finding files matching build.sh took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> hashed 0/3 files in 1.00s
         compile::<rootDir> input manifest: .lazy/compile/manifest.tsv
         compile::<rootDir> output log: .lazy/compile/output.log
-        compile::<rootDir> finding files matching src/**/* took 1.00s
+        compile::<rootDir> finding files took 1.00s
         compile::<rootDir> restoring missing file: src/cli.js
         compile::<rootDir> restoring missing file: src/index.js
         compile::<rootDir> restoring missing file: src/test/index.test.js
         compile::<rootDir> output manifest: .lazy/compile/output-manifest.tsv
         compile::<rootDir> restored 3 output files
         compile::<rootDir> ✔ cache hit ⚡️ in 1.00s
-        build::packages/utils finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/utils finding files matching lazy.config.* took 1.00s
-        build::packages/utils finding files matching packages/utils/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils hashed 0/4 files in 1.00s
         build::packages/utils input manifest: packages/utils/.lazy/build/manifest.tsv
         build::packages/utils output log: packages/utils/.lazy/build/output.log
-        build::packages/utils finding files matching packages/utils/dist/**/* took 1.00s
+        build::packages/utils finding files took 1.00s
         build::packages/utils unchanged packages/utils/dist/test/index.test.js
         build::packages/utils output manifest: packages/utils/.lazy/build/output-manifest.tsv
         build::packages/utils restored 1 output file
         build::packages/utils ✔ cache hit ⚡️ in 1.00s
-        build::packages/core finding files matching {yarn.lock,pnpm-lock.yaml,package-lock.json} took 1.00s
-        build::packages/core finding files matching lazy.config.* took 1.00s
-        build::packages/core finding files matching packages/core/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core hashed 0/4 files in 1.00s
         build::packages/core input manifest: packages/core/.lazy/build/manifest.tsv
         build::packages/core output log: packages/core/.lazy/build/output.log
-        build::packages/core finding files matching packages/core/dist/**/* took 1.00s
+        build::packages/core finding files took 1.00s
         build::packages/core unchanged packages/core/dist/cli.js
         build::packages/core output manifest: packages/core/.lazy/build/output-manifest.tsv
         build::packages/core restored 1 output file

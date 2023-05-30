@@ -1,14 +1,14 @@
-import glob from 'fast-glob'
+import { cwd } from '../cwd.js'
+import { glob } from '../glob/glob.js'
 import { logger } from '../logger/logger.js'
 import { Project } from '../project/Project.js'
 import { rimraf } from '../utils/rimraf.js'
 
 export function clean() {
-  const project = Project.fromCwd(process.cwd())
+  const project = Project.fromCwd(cwd)
   const cacheDirs = glob.sync(['**/.lazy'], {
     ignore: ['**/node_modules'],
-    absolute: true,
-    onlyDirectories: true,
+    types: 'dirs',
     cwd: project.root.dir,
   })
 
